@@ -1,0 +1,67 @@
+name: DOCER
+
+on: pull_request
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: repo
+          fetch-depth: 0
+
+      - name: Checkout wiki
+        continue-on-error: true
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+
+      - name: Checkout tool
+        uses: actions/checkout@v3
+        with:
+          repository: wesleytanws/DOCER_tool
+          path: tool
+
+      - name: Run tool
+        run: |
+          pip install pandas numpy
+          bash tool/analysis.sh
+
+          echo 'report<<EOF' >> $GITHUB_ENV
+          python tool/report.py ${{ github.repository }} ${{ github.run_id }} >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+
+      - name: Comment on pull request
+        if: ${{ env.report }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: process.env.report
+            })
+
+      - name: Upload artifact
+        if: ${{ env.report }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: report
+          path: |
+            output/report.csv
+            output/summary.csv
+            output/summary.md
