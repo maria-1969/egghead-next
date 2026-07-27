@@ -1,7 +1,7 @@
 'use server'
 
 import {RowDataPacket} from 'mysql2/promise'
-import {PostSchema} from '@/schemas/post'
+import {PostResourceSchema} from '@/schemas/content/post'
 import {logEvent} from '@/utils/structured-log'
 import {parseSlugForHash} from './utils'
 import {getTagsForPost} from './get-tags'
@@ -116,7 +116,7 @@ export async function getPost(slug: string) {
     }
 
     // Validate post data
-    const postData = PostSchema.safeParse(postRow)
+    const postData = PostResourceSchema.safeParse(postRow)
     if (!postData.success) {
       console.error('Post validation failed:', postData.error)
       throw new Error(`Invalid post data: ${postData.error.message}`)

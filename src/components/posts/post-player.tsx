@@ -11,7 +11,7 @@ import {trpc} from '@/app/_trpc/client'
 import {useMuxPlayer} from '@/hooks/use-mux-player'
 import {useVideoPlayerOverlay} from '@/hooks/mux/use-video-player-overlay'
 import {track} from '@/utils/analytics'
-import type {Post, Tag} from '@/schemas/post'
+import type {Post, Tag} from '@/schemas/content/post'
 
 const defaultPlayerProps = {
   id: 'mux-player',

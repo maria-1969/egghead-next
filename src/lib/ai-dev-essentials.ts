@@ -1,5 +1,5 @@
 import {RowDataPacket} from 'mysql2/promise'
-import {PostSchema, type Post} from '@/schemas/post'
+import {PostResourceSchema, type Post} from '@/schemas/content/post'
 import {z} from 'zod'
 import {getPool} from './db'
 function convertToSerializeForNextResponse(result: any): any {
@@ -52,7 +52,7 @@ export async function getAIDevEssentialsPosts(): Promise<Post[]> {
     const posts: Post[] = []
 
     for (const postRow of postRows) {
-      const postData = PostSchema.safeParse(postRow)
+      const postData = PostResourceSchema.safeParse(postRow)
       if (postData.success) {
         posts.push(convertToSerializeForNextResponse(postData.data))
       } else {
