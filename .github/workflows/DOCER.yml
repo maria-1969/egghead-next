@@ -31,17 +31,10 @@ jobs:
           path: repo
           fetch-depth: 0   # DOCER walks history for the doc-snapshot revision
 
-      - name: Checkout wiki
-        continue-on-error: true
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository }}.wiki
-          path: wiki
-
       - name: Assemble vendored DOCER tool
         run: |
           cp -r repo/.github/docer tool
-          mkdir -p wiki output
+          mkdir -p wiki output   # empty wiki dir: this fork scans CLAUDE.md, not a GitHub wiki
 
       - name: Run DOCER (referential rot in CLAUDE.md)
         env:
@@ -107,4 +100,9 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ROT_MODEL: claude-sonnet-4-6   # override to raise/lower the audit model
-        run: node .github/docer/context-rot-check.mjs pr --base "origin/${{ github.event.pull_request.base.ref }}"
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "No ANTHROPIC_API_KEY secret set — skipping semantic audit (add the secret to enable)."
+            exit 0
+          fi
+          node .github/docer/context-rot-check.mjs pr --base "origin/${{ github.event.pull_request.base.ref }}"
