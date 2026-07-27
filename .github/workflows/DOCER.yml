@@ -1,9 +1,18 @@
-name: DOCER
+name: DOCER (context rot)
 
 on: pull_request
 
+# Two independent jobs:
+#   referential — vendored DOCER (git-grep) audits CLAUDE.md for code
+#                 references that no longer exist. Catches renamed/moved/
+#                 deleted symbols and paths. Comments on the PR.
+#   semantic    — LLM auditor catches what DOCER structurally cannot:
+#                 count rot, phantom architecture, contradictions.
+#                 Gated on structural diffs; warn-only for now.
+
 jobs:
-  run:
+  referential:
+    name: Referential rot (DOCER)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -12,7 +21,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,7 +29,7 @@ jobs:
           repository: ${{ github.repository }}
           ref: ${{ github.event.pull_request.head.sha }}
           path: repo
-          fetch-depth: 0
+          fetch-depth: 0   # DOCER walks history for the doc-snapshot revision
 
       - name: Checkout wiki
         continue-on-error: true
@@ -29,20 +38,22 @@ jobs:
           repository: ${{ github.repository }}.wiki
           path: wiki
 
-      - name: Checkout tool
-        uses: actions/checkout@v4
-        with:
-          repository: wesleytanws/DOCER_tool
-          path: tool
+      - name: Assemble vendored DOCER tool
+        run: |
+          cp -r repo/.github/docer tool
+          mkdir -p wiki output
 
-      - name: Run tool
+      - name: Run DOCER (referential rot in CLAUDE.md)
+        env:
+          LC_ALL: C.UTF-8   # git grep -P needs a UTF-8 locale
+          LANG: C.UTF-8
         run: |
           pip install pandas numpy
           bash tool/analysis.sh
 
-          echo 'report<<EOF' >> $GITHUB_ENV
-          python tool/report.py ${{ github.repository }} ${{ github.run_id }} >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          echo 'report<<EOF' >> "$GITHUB_ENV"
+          python tool/report.py "${{ github.repository }}" "${{ github.run_id }}" >> "$GITHUB_ENV"
+          echo 'EOF' >> "$GITHUB_ENV"
 
       - name: Comment on pull request
         if: ${{ env.report }}
@@ -60,8 +71,40 @@ jobs:
         if: ${{ env.report }}
         uses: actions/upload-artifact@v4
         with:
-          name: report
+          name: docer-report
           path: |
             output/report.csv
             output/summary.csv
             output/summary.md
+
+  semantic:
+    name: Semantic rot (LLM)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: git fetch --no-tags origin "${{ github.event.pull_request.base.ref }}"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The checker self-gates: it only calls the model when the PR touches
+      # structural files (schema.prisma, package.json, src/datasources, moved/
+      # deleted files). continue-on-error keeps this warn-only during rollout —
+      # flip it off (and set the script to exit 1) to make it a hard gate.
+      - name: Semantic context-rot audit (LLM)
+        continue-on-error: true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ROT_MODEL: claude-sonnet-4-6   # override to raise/lower the audit model
+        run: node .github/docer/context-rot-check.mjs pr --base "origin/${{ github.event.pull_request.base.ref }}"
