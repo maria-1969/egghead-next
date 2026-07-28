@@ -43,7 +43,7 @@ export const FieldsSchema = z.object({
   ogImage: z.string().nullish(),
 })
 
-export const PostSchema = z.object({
+export const PostResourceSchema = z.object({
   id: z.string().optional(),
   type: z.string().optional(),
   createdById: z.string().optional(),
@@ -73,7 +73,7 @@ export const CourseSchema = z
 // Export types
 export type PostType = z.infer<typeof PostTypeSchema>
 export type Fields = z.infer<typeof FieldsSchema>
-export type Post = z.infer<typeof PostSchema>
+export type Post = z.infer<typeof PostResourceSchema>
 export type Course = z.infer<typeof CourseSchema>
 
 // MDX and component prop types

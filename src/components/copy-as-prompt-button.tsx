@@ -5,7 +5,7 @@ import {useCopyAsPrompt} from '@/hooks/use-copy-as-prompt'
 import {useViewer} from '@/context/viewer-context'
 import {track} from '@/utils/analytics'
 import Link from 'next/link'
-import {PostType} from '@/schemas/post'
+import {PostType} from '@/schemas/content/post'
 import LockIcon from '@/components/icons/lock'
 
 interface LessonData {

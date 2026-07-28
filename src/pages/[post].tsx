@@ -15,7 +15,7 @@ import {
   getAllPostSlugs,
   convertToSerializeForNextResponse,
 } from '@/lib/posts-query'
-import type {PostPageProps} from '@/schemas/post'
+import type {PostPageProps} from '@/schemas/content/post'
 import serializeMDX from '@/markdown/serialize-mdx'
 
 // Import components

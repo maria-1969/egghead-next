@@ -6,7 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {cn} from '@/ui/utils'
 import {track} from '@/utils/analytics'
-import type {Tag} from '@/schemas/post'
+import type {Tag} from '@/schemas/content/post'
 
 interface TagListProps {
   tags: Tag[]

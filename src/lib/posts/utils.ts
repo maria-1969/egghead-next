@@ -1,4 +1,4 @@
-import type {ParsedSlug} from '@/schemas/post'
+import type {ParsedSlug} from '@/schemas/content/post'
 
 export function parseSlugForHash(rawSlug: string | string[]): ParsedSlug {
   if (!rawSlug) {

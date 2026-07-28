@@ -1,4 +1,4 @@
-import {PostType} from '@/schemas/post'
+import {PostType} from '@/schemas/content/post'
 
 interface LessonData {
   title: string

@@ -6,7 +6,7 @@ import {
   validateContentData,
   estimateContentSize,
 } from '@/lib/format-content-as-prompt'
-import {PostType} from '@/schemas/post'
+import {PostType} from '@/schemas/content/post'
 
 interface LessonData {
   title: string
