@@ -43,6 +43,7 @@ pnpm sanity          # Start Sanity Studio
 - **Payments**: Stripe
 - **Authentication**: Custom auth via app.egghead.io
 - **Search**: Typesense
+- **Data layer**: the app is backed by **three Prisma datasources**, each defined in its own `schema.prisma` file under `prisma/`.
 
 ### Directory Structure
 

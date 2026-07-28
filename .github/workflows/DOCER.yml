@@ -8,7 +8,8 @@ on: pull_request
 #                 deleted symbols and paths. Comments on the PR.
 #   semantic    — LLM auditor catches what DOCER structurally cannot:
 #                 count rot, phantom architecture, contradictions.
-#                 Gated on structural diffs; warn-only for now.
+#                 Gated on structural diffs. Referential BLOCKS the PR on
+#                 findings; semantic is WARN-ONLY (LLM shouldn't gate merges yet).
 
 jobs:
   referential:
@@ -70,6 +71,15 @@ jobs:
             output/summary.csv
             output/summary.md
 
+      # Hard gate: fail the check when stale references were found. The comment
+      # and artifact steps above already ran. env.report is non-empty only when
+      # report.py emitted outdated references.
+      - name: Fail if referential rot found
+        if: ${{ env.report }}
+        run: |
+          echo "::error::DOCER found stale references in AI config files — see the PR comment."
+          exit 1
+
   semantic:
     name: Semantic rot (LLM)
     runs-on: ubuntu-latest
@@ -91,12 +101,13 @@ jobs:
         with:
           node-version: '20'
 
-      # The checker self-gates: it only calls the model when the PR touches
-      # structural files (schema.prisma, package.json, src/datasources, moved/
-      # deleted files). continue-on-error keeps this warn-only during rollout —
-      # flip it off (and set the script to exit 1) to make it a hard gate.
+      # AUDIT mode grounds each AI config file against the CURRENT repo facts
+      # (npm scripts, prisma schema count, tracked paths) — so it catches count /
+      # contradiction / phantom rot even when this PR's diff didn't cause it. A
+      # diff-scoped (pr) check would miss those. WARN-ONLY: it surfaces findings
+      # in the log scoreboard but never blocks a merge — an LLM's judgment
+      # shouldn't gate people's PRs on day one. (Referential IS the hard gate.)
       - name: Semantic context-rot audit (LLM)
-        continue-on-error: true
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ROT_MODEL: claude-sonnet-4-6   # override to raise/lower the audit model
@@ -105,4 +116,7 @@ jobs:
             echo "No ANTHROPIC_API_KEY secret set — skipping semantic audit (add the secret to enable)."
             exit 0
           fi
-          node .github/docer/context-rot-check.mjs pr --base "origin/${{ github.event.pull_request.base.ref }}"
+          # Limit to the AI-config files (not human README/VISION) to keep cost down.
+          node .github/docer/context-rot-check.mjs audit --files CLAUDE.md AGENTS.md \
+            || echo "::warning::Semantic audit errored — not blocking the PR."
+          exit 0
