@@ -95,15 +95,22 @@ async function ask(body) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": API_KEY, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify({ model: MODEL, max_tokens: 2000, system: SYSTEM, messages: [{ role: "user", content: body }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: 8000, system: SYSTEM, messages: [{ role: "user", content: body }] }),
   });
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   const data = await res.json();
+  const stop = data.stop_reason;
   const text = data.content.filter((b) => b.type === "text").map((b) => b.text).join("");
+  // Be tolerant: strip fences, then take the outermost {...} in case the model
+  // added a sentence of prose around the JSON.
+  let json = text.replace(/```json|```/g, "").trim();
+  const open = json.indexOf("{"), close = json.lastIndexOf("}");
+  if (open >= 0 && close > open) json = json.slice(open, close + 1);
   try {
-    return JSON.parse(text.replace(/```json|```/g, "").trim()).findings || [];
+    return JSON.parse(json).findings || [];
   } catch {
-    console.error("  ! unparseable model output, skipping file");
+    const hint = stop === "max_tokens" ? " (response hit max_tokens — raise it)" : "";
+    console.error(`  ! unparseable model output, skipping file${hint}. First 400 chars:\n${text.slice(0, 400)}`);
     return [];
   }
 }
